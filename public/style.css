@@ -1,7 +1,21 @@
+body {
+  margin: 0;
+  padding: 0;
+  box-sizing: border-box;
+}
+
+ul {
+  list-style: none;
+}
 #annonces {
   padding: 15px;
 }
 
 #annonces li {
   margin: 10px;
+}
+
+
+#news ul {
+  display: flex;
 }

@@ -1,9 +1,15 @@
 const puppeteer = require('puppeteer');
-const app = require('express')();
+const express = require('express');
+const app = express();
 const http = require('http').Server(app);
 const io = require('socket.io')(http);
 
-const siteData = {
+const SLOW = 1200000;
+const QUICK = 100000
+
+app.use(express.static('public'))
+
+const af = {
   name: 'Audiofanzine',
   section: [
     {
@@ -19,11 +25,27 @@ const siteData = {
   ]
 }
 
+const directDl = {
+  name: 'Direct Download',
+  section: [
+    {
+      name: 'Nouveautés',
+      url: 'https://ww1.extreme-d0wn.com/home.html',
+      data: []
+    },
+    {
+      name: 'Exclu',
+      url: 'https://ww1.extreme-d0wn.com/home.html',
+      data: []
+    }
+  ]
+}
+
 // Recup New Audiofanzine
 async function getNews() {
   const browser = await puppeteer.launch();
   const page = await browser.newPage();
-  await page.goto(siteData.section[1].url);
+  await page.goto(af.section[1].url);
   //await page.screenshot({path: 'example.png'});
 
   const allNews = await page.evaluate(
@@ -36,7 +58,7 @@ async function getNews() {
           }))
   )
 
-  siteData.section[1].data = allNews
+  af.section[1].data = allNews
 
   await browser.close();
   //return allNews
@@ -46,8 +68,7 @@ async function getNews() {
 async function getAnnonces() {
   const browser = await puppeteer.launch();
   const page = await browser.newPage();
-  await page.goto(siteData.section[0].url);
-  //await page.screenshot({path: 'example.png'});
+  await page.goto(af.section[0].url);
   const titles = await page.evaluate(
     () => Array.from(document.querySelectorAll('h2 span.playlist-row-title'))
       .map(title => title.innerText.trim())
@@ -64,39 +85,67 @@ async function getAnnonces() {
           }))
   )
 
-   siteData.section[0].data = annonces
+   af.section[0].data = annonces
 
   await browser.close();
   //return annonces
 };
 
+async function getDL_news() {
 
-// console.log(siteData);
+  const browser = await puppeteer.launch();
+  const page = await browser.newPage();
+  await page.goto(directDl.section[0].url);
 
-function updateAll() {
+  const movies = await page.evaluate(
+    () => Array.from(document.querySelectorAll('#Films a.top-last'))
+          .map( film => ({
+            title: film.querySelector('.top-title').innerText.trim(),
+            img: film.querySelector('img').src,
+            full: film.href
+          }))
+  )
+
+   directDl.section[0].data = movies
+  await browser.close();
+
+};
+
+
+// console.log(af);
+
+function updateAllQuick() {
   setInterval(function(){
     console.log('update...');
     getNews();
     getAnnonces();
-    io.emit('news', siteData)
-  }, 50000 );
+    io.emit('news', af)
+  }, QUICK );
 }
 
-updateAll()
+function updateSlow(){
+  setInterval(function(){
+    console.log('updateSlow')
+    getDL_news();
+    io.emit('movies', directDl)
+  }, SLOW)
+}
+
+updateAllQuick()
+updateSlow()
 
 io.on('connection', (socket) => {
   console.log('User connected..');
-  socket.on('chat message', (s) => {
-    console.log('message: ',s)
-    io.emit('chat message', s)
-  })
+  io.emit('news', af)
+  io.emit('movies', directDl)
 })
 
 getNews()
 getAnnonces()
+getDL_news()
 
 app.get('/', (req, res) => {
-    io.emit('news', siteData)
+    io.emit('news', af)
     res.sendFile(__dirname + '/public/index.html');
 });
 
