@@ -105,9 +105,9 @@ async function getDL_news() {
             full: film.href
           }))
   )
-
-   directDl.section[0].data = movies
-  await browser.close();
+  console.log(movies)
+    directDl.section[0].data = movies
+    await browser.close();
 
 };
 
