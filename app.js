@@ -1,12 +1,16 @@
 const puppeteer = require('puppeteer');
 const express = require('express');
 const app = express();
+const cors = require('cors')
 const http = require('http').Server(app);
 const io = require('socket.io')(http);
 
-const SLOW = 1200000;
-const QUICK = 100000
+const PORT = 3100;
 
+const SLOW = 1200000;
+const QUICK = 500000
+
+app.use(cors())
 app.use(express.static('public'))
 
 const af = {
@@ -105,7 +109,7 @@ async function getDL_news() {
             full: film.href
           }))
   )
-  console.log(movies)
+
     directDl.section[0].data = movies
     await browser.close();
 
@@ -119,7 +123,7 @@ function updateAllQuick() {
     console.log('update...');
     getNews();
     getAnnonces();
-    io.emit('news', af)
+    //io.emit('news', af)
   }, QUICK );
 }
 
@@ -127,30 +131,46 @@ function updateSlow(){
   setInterval(function(){
     console.log('updateSlow')
     getDL_news();
-    io.emit('movies', directDl)
+    //io.emit('movies', directDl)
   }, SLOW)
 }
 
 updateAllQuick()
 updateSlow()
 
-io.on('connection', (socket) => {
-  console.log('User connected..');
-  io.emit('news', af)
-  io.emit('movies', directDl)
-})
+// io.on('connection', (socket) => {
+//   console.log('User connected..');
+//   io.emit('news', af)
+//   io.emit('movies', directDl)
+// })
 
 getNews()
 getAnnonces()
 getDL_news()
 
 app.get('/', (req, res) => {
-    io.emit('news', af)
+    //io.emit('news', af)
     res.sendFile(__dirname + '/public/index.html');
 });
 
+app.get('/afnews', (req, res)=>{
+  res.send(af.section[1].data)
+})
 
-http.listen(8080, (err) => {
+app.get('/afannonces', (req, res) => {
+  res.send(af.section[0].data)
+})
+
+app.get('/dlnews', (req, res)=>{
+  res.send(directDl.section[0].data);
+})
+
+app.get('/dlexclu', (req, res)=>{
+  res.send(directDl.section[1].data);
+})
+
+
+http.listen(PORT, (err) => {
   if (err) {
     console.log('Erreur',err);
     return
